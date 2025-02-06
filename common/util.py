@@ -1,3 +1,6 @@
+import discord
+
+
 async def get_message_in_history(have_histories):
   histories = have_histories.history(limit=None)
   message = []
@@ -6,3 +9,20 @@ async def get_message_in_history(have_histories):
     message.append(history)
 
   return message
+
+
+def is_message_in_thread(message):
+  if isinstance(message.channel, discord.Thread):
+    return True
+
+  return False
+
+
+async def get_all_members_in_guild(client):
+  members = []
+
+  for guild in client.guilds:
+    async for member in guild.fetch_members(limit=None):
+      members.append(member)
+
+  return members
