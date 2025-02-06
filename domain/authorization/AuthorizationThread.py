@@ -18,7 +18,6 @@ class AuthorizationThread:
 
   def already_exists_content_with_prefix(self, prefix: str):
     for message in self.thread_messages:
-      print(message.content)
       if message.content.startswith(prefix):
         return True
     return False
