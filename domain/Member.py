@@ -1,3 +1,6 @@
+import discord
+
+
 class Member:
 
   def __init__(self, id, nick_name, name):
@@ -6,7 +9,7 @@ class Member:
     self.name = name
 
   @classmethod
-  def from_with_discord_member(cls, member_in_discord):
+  def from_with_discord_member(cls, member_in_discord: discord.Member):
     return Member(
         member_in_discord.id,
         member_in_discord.global_name,

@@ -11,12 +11,13 @@ class PostLimitDecision:
   @classmethod
   def from_with_message(cls, message):
     content = message.content
+    limit_line = content.splitlines()[cls.LINE]
 
-    if not content.startswith(cls.KEY_WORD):
+    if not limit_line.startswith(cls.KEY_WORD):
       return PostLimitDecision(None)
 
     try:
-      limit = int(content[len(cls.KEY_WORD):].strip())
+      limit = int(limit_line[len(cls.KEY_WORD):].strip())
       return PostLimitDecision(limit)
     except ValueError:
       return PostLimitDecision(None)
@@ -26,3 +27,6 @@ class PostLimitDecision:
       return False
 
     return True
+
+  def __str__(self):
+    return f"limit: {self.limit}"
