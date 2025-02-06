@@ -1,7 +1,9 @@
+import discord
+
 from domain.authorization.WritingAuthorization import WritingAuthorization
 
 
-async def set_goal(message, members):
+async def set_goal(message: discord.Message, members: discord.Member):
   writing_authorization = await WritingAuthorization.of(message, members)
   await writing_authorization.create_thread_with_start_message()
 

@@ -11,7 +11,7 @@ class DateDecision:
     self.date = date
 
   @classmethod
-  def from_with_message(cls, message):
+  def from_with_message(cls, message: discord.Message):
     content = message.content
     date_line = content.splitlines()[cls.LINE]
 

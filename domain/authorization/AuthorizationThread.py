@@ -1,4 +1,4 @@
-from common.util import get_message_in_history
+from common.Util import get_message_in_history
 
 
 class AuthorizationThread:
@@ -17,7 +17,6 @@ class AuthorizationThread:
     return AuthorizationThread(message, thread_messages)
 
   def already_exists_content_with_prefix(self, prefix: str):
-    print(prefix)
     for message in self.thread_messages:
       print(message.content)
       if message.content.startswith(prefix):
