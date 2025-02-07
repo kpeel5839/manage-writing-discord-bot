@@ -6,9 +6,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import discord
 from discord.ext import commands
 
-from app.Service import set_goal
-from common.Util import get_all_members_in_guild, get_message_in_history, \
-  is_message_in_thread
+from app.Service import set_goal, authorization, mention_who_get_penalty_user
+from common.Util import get_all_members_in_guild, get_message_in_history
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 intents = discord.Intents.default()
 
@@ -25,32 +26,48 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 AUTHORIZATION_CHANNEL_ID = int(os.getenv("AUTHORIZATION_CHANNEL_ID"))
 
 
-@client.event
-async def on_ready():
+async def penalty_job():
   channel = client.get_channel(AUTHORIZATION_CHANNEL_ID)
   all_messages_in_channel = await get_message_in_history(channel)
   members = await get_all_members_in_guild(client)
   for each_message in all_messages_in_channel:
     try:
-      if not is_message_in_thread(each_message):
-        await set_goal(each_message, members)
+      await mention_who_get_penalty_user(each_message, members)
     except:
       pass
 
 
-# @client.command(name="인증")
-# async def reply_here(ctx):
-#   if isinstance(ctx.channel, discord.Thread):  # 현재 채널이 스레드인지 확인
-#     await ctx.send(f"✅ `{ctx.command}` 명령어가 스레드에서 실행되었습니다!")
-#     await ctx.message.reply(
-#         f"👍 `{ctx.command}` 명령어가 스레드에서 실행되었습니다! {ctx.message.content}",
-#         mention_author=True
-#     )
-#     thread = ctx.channel
-#     messages = await get_message_in_history(thread)
-#     await ctx.message.reply(messages.__str__()[:2000])
-#   else:
-#     await ctx.send("⚠️ 이 명령어는 스레드에서 실행해야 합니다.")
+async def start_schedule():
+  scheduler = AsyncIOScheduler()
+  scheduler.add_job(penalty_job,
+                    CronTrigger(
+                        hour=0,
+                        minute=0,
+                        second=1,
+                        timezone='Asia/Seoul'
+                    ))
+  scheduler.start()
+
+
+@client.event
+async def on_ready():
+  await start_schedule()
+  channel = client.get_channel(AUTHORIZATION_CHANNEL_ID)
+  all_messages_in_channel = await get_message_in_history(channel)
+  members = await get_all_members_in_guild(client)
+  for each_message in all_messages_in_channel:
+    try:
+      await set_goal(each_message, members)
+    except:
+      pass
+    try:
+      await authorization(each_message, members)
+    except:
+      pass
+    try:
+      await mention_who_get_penalty_user(each_message, members)
+    except Exception as e:
+      print(f"Error Reason: {e}")
 
 
 @client.event
@@ -60,8 +77,12 @@ async def on_message(message):
   if message.author == bot:
     return
 
-  if message.content.startswith("!목표") and not is_message_in_thread(message):
+  if message.content.startswith("!목표"):
     await set_goal(message, await get_all_members_in_guild(client))
+    return
+
+  if message.content.startswith("!인증"):
+    await authorization(message, await get_all_members_in_guild(client))
     return
 
   await client.process_commands(message)

@@ -30,3 +30,20 @@ async def get_all_members_in_guild(client):
       members.append(member)
 
   return members
+
+
+async def get_or_create_thread(
+    message: discord.Message,
+    thread_name: str
+):
+  existing_thread = discord.utils.get(
+      message.channel.threads,
+      name=thread_name
+  )
+
+  if existing_thread:
+    return existing_thread
+
+  return await message.create_thread(
+      name=thread_name
+  )

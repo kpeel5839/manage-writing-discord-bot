@@ -29,5 +29,8 @@ class Assignee:
 
     return ", ".join(links)
 
+  def lack_of_writing(self, limit: int):
+    return max(0, limit - len(self.links))
+
   def __str__(self):
     return str(self.assignee.__str__())
