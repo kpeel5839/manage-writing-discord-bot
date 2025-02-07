@@ -18,6 +18,7 @@ class WritingAuthorization:
   PENALTY_COST = 10000
   PENALTY_MESSAGE_PREFIX = "<@{}>님 당첨되었습니다."
   PENALTY_MESSAGE = "{} 벌금은 글 하나당 {}원 이며 당신은 {}개 미달했습니다. 고로 벌금은 {}원 입니다."
+  DATE_FORMAT = "%Y-%m-%d"
 
   def __init__(
       self,
@@ -96,16 +97,17 @@ class WritingAuthorization:
         )):
       return
 
-    thread_name = self.THREAD_NAME.format(self.date_decision.date)
+    thread_name = self.THREAD_NAME.format(
+        self.date_decision.date.strftime(self.DATE_FORMAT)
+    )
     thread: discord.Thread = await get_or_create_thread(
         self.original_message,
         thread_name
     )
 
-    print(f"{self.date_decision.date}")
     start_message = self.START_MESSSAGE.format(
         self.START_MESSSAGE_PREFIX,
-        self.date_decision,
+        self.date_decision.date.strftime(self.DATE_FORMAT),
         self.post_limit_decision.limit,
         self.assignees.assignees_nick_names(),
     )
