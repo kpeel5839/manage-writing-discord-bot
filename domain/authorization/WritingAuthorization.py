@@ -1,6 +1,7 @@
 import discord
 
 from domain.authorization.Assignees import Assignees
+from domain.authorization.AuthorizationMessage import AuthorizationMessage
 from domain.authorization.AuthorizationThread import AuthorizationThread
 from domain.authorization.DateDecision import DateDecision
 from domain.authorization.PostLimitDecision import PostLimitDecision
@@ -26,13 +27,27 @@ class WritingAuthorization:
     self.authorization_thread = authorization_thread
 
   @classmethod
-  async def of(cls, message, members):
+  async def of(cls,
+      message,
+      members,
+      removed_latest_message_for_authorization: bool = False
+  ):
+    authorization_thread = await AuthorizationThread.from_with_message(message)
+
+    authorization_messages = authorization_thread.get_authorization_messages_in_thread(
+        removed_latest_message_for_authorization
+    )
+
+    assignees = Assignees.from_with_message_and_members(message, members)
+    for authorization_message in authorization_messages:
+      await assignees.authorize_link_by_message(authorization_message)
+
     return WritingAuthorization(
         message,
         DateDecision.from_with_message(message),
         PostLimitDecision.from_with_message(message),
-        Assignees.from_with_message_and_members(message, members),
-        await AuthorizationThread.from_with_message(message),
+        assignees,
+        authorization_thread
     )
 
   async def create_thread_with_start_message(self):
@@ -58,12 +73,19 @@ class WritingAuthorization:
   def is_valid_message(self):
     return self.date_decision.is_valid() and self.post_limit_decision.is_valid() and self.assignees.is_valid()
 
-  def authorize_member(self):
-    if self.is_valid_message():
+  async def authorize_member(self, message: discord.Message):
+    if not self.is_valid_message():
       return
 
+    authorization_message = AuthorizationMessage.from_with_message(message)
+    await self.assignees.authorize_link_by_message(
+        authorization_message,
+        self.post_limit_decision.limit,
+        True
+    )
+
   def mention_penalty_to_user(self):
-    if self.is_valid_message():
+    if not self.is_valid_message():
       return
 
   def __str__(self):

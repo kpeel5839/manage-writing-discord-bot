@@ -1,4 +1,5 @@
 from common.Util import get_message_in_history
+from domain.authorization.AuthorizationMessage import AuthorizationMessage
 
 
 class AuthorizationThread:
@@ -21,6 +22,24 @@ class AuthorizationThread:
       if message.content.startswith(prefix):
         return True
     return False
+
+  def get_authorization_messages_in_thread(
+      self,
+      removed_latest_message: bool = False
+  ):
+    messages = []
+
+    for thread_message in self.thread_messages:
+      authorization_message = AuthorizationMessage.from_with_message(
+          thread_message
+      )
+      if authorization_message.is_valid():
+        messages.append(authorization_message)
+
+    if removed_latest_message:
+      return messages[:-1]
+
+    return messages
 
   def __str__(self):
     return f'AuthorizationThread(message={self.message}, thread_messages={self.thread_messages})'

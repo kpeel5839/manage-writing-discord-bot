@@ -11,6 +11,7 @@ async def get_message_in_history(have_histories):
   async for history in histories:
     message.append(history)
 
+  message.reverse()
   return message
 
 
