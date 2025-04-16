@@ -6,8 +6,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import discord
 from discord.ext import commands
 
-from app.Service import set_goal, authorization, mention_who_get_penalty_user
-from common.Util import get_all_members_in_guild, get_message_in_history
+from app.Service import set_goal, authorization, mention_who_get_penalty_user, \
+  mention_penalty_cost_each_user
+from common.Util import get_all_members_in_guild, get_message_in_history, \
+  get_or_create_thread
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
@@ -83,6 +85,22 @@ async def on_message(message):
 
   if message.content.startswith("!인증"):
     await authorization(message, await get_all_members_in_guild(client))
+    return
+
+  if message.content.__eq__("!벌금"):
+    channel = client.get_channel(AUTHORIZATION_CHANNEL_ID)
+    all_messages_in_channel = await get_message_in_history(channel)
+    members = await get_all_members_in_guild(client)
+    penalty_messages = await mention_penalty_cost_each_user(
+        all_messages_in_channel,
+        members
+    )
+    thread: discord.Thread = await get_or_create_thread(
+        message,
+        "벌금 고지"
+    )
+
+    await thread.send(penalty_messages)
     return
 
   await client.process_commands(message)
