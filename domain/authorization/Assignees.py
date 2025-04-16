@@ -1,5 +1,8 @@
 from math import asinh
 
+import discord
+
+from domain.Member import Member
 from domain.authorization.Assignee import Assignee
 from domain.authorization.AuthorizationMessage import AuthorizationMessage
 
@@ -14,7 +17,11 @@ class Assignees:
     self.assignees = assignees
 
   @classmethod
-  def from_with_message_and_members(cls, message, whole_members):
+  def from_with_message_and_members(
+      cls,
+      message,
+      whole_members: discord.Member
+  ):
     content = message.content
     assignees_line = content.splitlines()[cls.LINE]
 
@@ -22,17 +29,17 @@ class Assignees:
       return Assignees([])
 
     mentions = assignees_line[len(cls.KEY_WORD):]
-
     mentions_without_space = (mentions.replace(" ", "")
                               .replace("<", "")
                               .replace(">", ""))
     member_ids = [int(num) for num in mentions_without_space.split('@') if num]
-
     assignees = []
 
     for member in whole_members:
       if member_ids.__contains__(member.id):
-        assignee = Assignee.from_with_member(member)
+        assignee = Assignee.from_with_member(
+            Member.from_with_discord_member(member)
+        )
         assignees.append(assignee)
 
     return Assignees(assignees)
