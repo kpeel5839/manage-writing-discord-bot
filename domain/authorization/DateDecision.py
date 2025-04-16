@@ -35,3 +35,6 @@ class DateDecision:
 
   def __str__(self):
     return str(self.date)
+
+  def time_is_not_over_due_date(self, now_time_in_seoul) -> bool:
+    return self.date.date() >= now_time_in_seoul.date()
