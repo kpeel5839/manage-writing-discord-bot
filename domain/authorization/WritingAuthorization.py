@@ -8,6 +8,8 @@ from domain.authorization.Assignees import Assignees
 from domain.authorization.AuthorizationMessage import AuthorizationMessage
 from domain.authorization.AuthorizationThread import AuthorizationThread
 from domain.authorization.DateDecision import DateDecision
+from domain.authorization.penalty.Penalties import Penalties
+from domain.authorization.penalty.Penalty import Penalty
 from domain.authorization.PostLimitDecision import PostLimitDecision
 
 
@@ -64,7 +66,7 @@ class WritingAuthorization:
   async def of_by_thread_message(
       cls,
       thread_message,
-      members,
+      members: discord.Member,
       removed_latest_message_for_authorization: bool = False
   ):
     assert is_message_in_thread(thread_message), "is not in thread message"
@@ -149,6 +151,27 @@ class WritingAuthorization:
           remain_writing * self.PENALTY_COST
       )
       await message_thread.send(penalty_message)
+
+  def get_penalties(self) -> Penalties:
+    penalties = Penalties({})
+    now_time_in_seoul = (datetime.datetime.now(ZoneInfo("Asia/Seoul"))
+                         .replace(tzinfo=None))
+
+    if self.date_decision.time_is_not_over_due_date(now_time_in_seoul):
+      return penalties
+
+    for assignee in self.assignees.assignees:
+      remain_writing = assignee.lack_of_writing(self.post_limit_decision.limit)
+
+      penalty = Penalty.of(
+          assignee.assignee,
+          self.PENALTY_COST,
+          remain_writing
+      )
+
+      penalties.add(penalty)
+
+    return penalties
 
   def __str__(self):
     return f'WritingAuthorization(date_decision={self.date_decision}, post_limit_decision={self.post_limit_decision}, assignees={self.assignees}, authorization_thread={self.authorization_thread})'
