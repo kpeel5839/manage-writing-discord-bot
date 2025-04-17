@@ -1,6 +1,3 @@
-import discord
-
-
 class PostLimitDecision:
   KEY_WORD = '!개수'
   LINE = 2
