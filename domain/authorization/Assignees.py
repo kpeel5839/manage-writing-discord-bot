@@ -1,10 +1,9 @@
-from math import asinh
-
 import discord
 
 from domain.Member import Member
 from domain.authorization.Assignee import Assignee
 from domain.authorization.AuthorizationMessage import AuthorizationMessage
+from domain.authorization.URL import ContentStatus
 
 
 class Assignees:
@@ -12,6 +11,8 @@ class Assignees:
   LINE = 3
   FAILED_AUTHORIZATION_MESSAGE = "이미 사용하거나 올바르지 않은 링크입니다 {}님"
   SUCCESS_AUTHORIZATION_MESSAGE = "{}님, 현재까지 {}로, {}개의 글을 쓰셨고, {}개 남았습니다."
+  NOT_FOUND_CONTENT_MESSAGE = "{}님, 링크에 접근할 수 없습니다. 콘텐츠가 게시된 후 다시 시도해주세요."
+  INSUFFICIENT_CONTENT_MESSAGE = "{}님, 콘텐츠가 너무 부실합니다. 충분한 내용을 작성한 뒤 다시 시도해주세요."
 
   def __init__(self, assignees: list[Assignee]):
     self.assignees = assignees
@@ -66,6 +67,23 @@ class Assignees:
     for assignee in self.assignees:
       if not assignee.is_same_id(message.author.id):
         continue
+
+      if authorization_message.link.is_valid():
+        content_status = await authorization_message.link.fetch_content_status()
+
+        if content_status in (ContentStatus.NOT_FOUND, ContentStatus.UNREACHABLE):
+          if send_message:
+            await message.reply(
+                self.NOT_FOUND_CONTENT_MESSAGE.format(assignee.assignee.name)
+            )
+          return
+
+        if content_status == ContentStatus.INSUFFICIENT:
+          if send_message:
+            await message.reply(
+                self.INSUFFICIENT_CONTENT_MESSAGE.format(assignee.assignee.name)
+            )
+          return
 
       is_successful_add = assignee.authorize_link(authorization_message.link)
 

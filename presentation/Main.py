@@ -10,6 +10,7 @@ from app.Service import set_goal, authorization, mention_who_get_penalty_user, \
   mention_penalty_cost_each_user
 from common.Util import get_all_members_in_guild, get_message_in_history, \
   get_or_create_thread
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
