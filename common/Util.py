@@ -23,11 +23,14 @@ def is_message_in_thread(message):
 
 
 async def get_all_members_in_guild(client):
+  seen_ids = set()
   members = []
 
   for guild in client.guilds:
     async for member in guild.fetch_members(limit=None):
-      members.append(member)
+      if member.id not in seen_ids:
+        seen_ids.add(member.id)
+        members.append(member)
 
   return members
 

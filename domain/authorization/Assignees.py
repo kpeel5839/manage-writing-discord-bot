@@ -102,6 +102,7 @@ class Assignees:
           len(assignee.links),
           max(0, writing_goal - len(assignee.links))
       ))
+      return
 
   def __str__(self):
     nick_names = []
