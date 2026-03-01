@@ -1,7 +1,7 @@
 import re
 import urllib.parse
-import aiohttp
 from html.parser import HTMLParser
+from curl_cffi.requests import AsyncSession
 
 
 class ContentStatus:
@@ -68,31 +68,35 @@ class URL:
       return ContentStatus.NOT_FOUND
 
     try:
-      timeout = aiohttp.ClientTimeout(total=self.FETCH_TIMEOUT)
-      async with aiohttp.ClientSession(timeout=timeout) as session:
-        async with session.get(self.url) as response:
-          if response.status == 404:
-            return ContentStatus.NOT_FOUND
-          if response.status != 200:
-            return ContentStatus.UNREACHABLE
+      async with AsyncSession() as session:
+        response = await session.get(
+            self.url,
+            impersonate="chrome",
+            timeout=self.FETCH_TIMEOUT
+        )
 
-          html = await response.text(errors='replace')
+        if response.status_code == 404:
+          return ContentStatus.NOT_FOUND
+        if response.status_code != 200:
+          return ContentStatus.UNREACHABLE
 
-          title_match = re.search(r'<title[^>]*>([^<]*)</title>', html, re.IGNORECASE)
-          if title_match and '404' in title_match.group(1):
-            return ContentStatus.NOT_FOUND
+        html = response.text
 
-          if any(marker in html.lower() for marker in SPA_MARKERS):
-            return ContentStatus.VALID
+        title_match = re.search(r'<title[^>]*>([^<]*)</title>', html, re.IGNORECASE)
+        if title_match and '404' in title_match.group(1):
+          return ContentStatus.NOT_FOUND
 
-          extractor = _TextExtractor()
-          extractor.feed(html)
-          lines = extractor.get_meaningful_lines()
-
-          if len(lines) <= self.MINIMUM_CONTENT_LINES:
-            return ContentStatus.INSUFFICIENT
-
+        if any(marker in html.lower() for marker in SPA_MARKERS):
           return ContentStatus.VALID
+
+        extractor = _TextExtractor()
+        extractor.feed(html)
+        lines = extractor.get_meaningful_lines()
+
+        if len(lines) <= self.MINIMUM_CONTENT_LINES:
+          return ContentStatus.INSUFFICIENT
+
+        return ContentStatus.VALID
     except Exception:
       return ContentStatus.UNREACHABLE
 
