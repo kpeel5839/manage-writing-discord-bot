@@ -1,3 +1,4 @@
+import asyncio
 import re
 import urllib.parse
 from html.parser import HTMLParser
@@ -47,6 +48,8 @@ class _TextExtractor(HTMLParser):
 class URL:
   MINIMUM_CONTENT_LINES = 5
   FETCH_TIMEOUT = 10
+  MAX_RETRIES = 3
+  BACKOFF_BASE = 1
 
   def __init__(self, url: str):
     self.url = url
@@ -67,38 +70,44 @@ class URL:
     if not self.is_valid():
       return ContentStatus.NOT_FOUND
 
-    try:
-      async with AsyncSession() as session:
-        response = await session.get(
-            self.url,
-            impersonate="chrome",
-            timeout=self.FETCH_TIMEOUT
-        )
+    for attempt in range(self.MAX_RETRIES):
+      try:
+        async with AsyncSession() as session:
+          response = await session.get(
+              self.url,
+              impersonate="chrome",
+              timeout=self.FETCH_TIMEOUT
+          )
 
-        if response.status_code == 404:
-          return ContentStatus.NOT_FOUND
-        if response.status_code != 200:
-          return ContentStatus.UNREACHABLE
+          if response.status_code == 404:
+            return ContentStatus.NOT_FOUND
 
-        html = response.text
+          if response.status_code != 200:
+            raise ConnectionError(f"status {response.status_code}")
 
-        title_match = re.search(r'<title[^>]*>([^<]*)</title>', html, re.IGNORECASE)
-        if title_match and '404' in title_match.group(1):
-          return ContentStatus.NOT_FOUND
+          html = response.text
 
-        if any(marker in html.lower() for marker in SPA_MARKERS):
+          title_match = re.search(r'<title[^>]*>([^<]*)</title>', html, re.IGNORECASE)
+          if title_match and '404' in title_match.group(1):
+            return ContentStatus.NOT_FOUND
+
+          if any(marker in html.lower() for marker in SPA_MARKERS):
+            return ContentStatus.VALID
+
+          extractor = _TextExtractor()
+          extractor.feed(html)
+          lines = extractor.get_meaningful_lines()
+
+          if len(lines) <= self.MINIMUM_CONTENT_LINES:
+            return ContentStatus.INSUFFICIENT
+
           return ContentStatus.VALID
 
-        extractor = _TextExtractor()
-        extractor.feed(html)
-        lines = extractor.get_meaningful_lines()
+      except Exception:
+        if attempt < self.MAX_RETRIES - 1:
+          await asyncio.sleep(self.BACKOFF_BASE * (2 ** attempt))
 
-        if len(lines) <= self.MINIMUM_CONTENT_LINES:
-          return ContentStatus.INSUFFICIENT
-
-        return ContentStatus.VALID
-    except Exception:
-      return ContentStatus.UNREACHABLE
+    return ContentStatus.UNREACHABLE
 
   def is_valid(self):
     return self.url is not None
